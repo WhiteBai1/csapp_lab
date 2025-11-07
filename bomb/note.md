@@ -22,7 +22,7 @@
 
 
 ## method
-- [参考](https://arthals.ink/blog/bomb-lab)
+- [参考：Arthals' ink](https://arthals.ink/blog/bomb-lab)
 
 ### preparation
 - 先反汇编 objdump -d bomb > bomb.asm
@@ -43,32 +43,32 @@
 - `<read_six_number> `最后 `cmp $0x5,%eax`,相等则跳过 `<explode_bomb>`
 - 查找`<__isoc99_sscanf>`的使用，其解析输入字符串，将读取的整数放入提供的寄存器，在返回读取到的整数个数到%eax中
 - 注意 `cmp $0x5,%eax` = %eax -$0x5,设立标志位，%eax>5，则ZF=0(结果不为0)，SF==OF(0=0)，满足jg跳转条件；所以 %eax至少为6
-- mov    -0x4(%rbx),%eax
-  add    %eax,%eax
-  cmp    %eax,(%rbx)
-  及
-  add    $0x4,%rbx
+- mov    -0x4(%rbx),%eax ..
+  add    %eax,%eax ..
+  cmp    %eax,(%rbx) ..
+  及 ..
+  add    $0x4,%rbx ..
   观察可知，rbx是输入的数字，将前一个输入的数字存到%eax中翻两倍，与当前数字比较，若相等，则继续比较下一位，否则爆炸
-- 最开始时，%rbx = %rsp +4-4=%rsp
+- 最开始时，%rbx = %rsp +4-4=%rsp ..
   %rsp 从`<read_six_numbers>`返回后为1，所以第一个数字为1
   
 ### phase_3
-- call   400bf0 <__isoc99_sscanf@plt>
-  cmp    $0x1,%eax
-  jg     400f6a <phase_3+0x27>
-  call   40143a <explode_bomb>
+- call   400bf0 <__isoc99_sscanf@plt> ..
+  cmp    $0x1,%eax .. 
+  jg     400f6a <phase_3+0x27> ..
+  call   40143a <explode_bomb> ..
   `<__isoc99_sscanf@plt>`依旧读取整数，将整数个数放入 %eax中，则至少输入两个整数
 - 最先输入数据占用当用栈的最低位置
-- lea    0xc(%rsp),%rcx
-  lea    0x8(%rsp),%rdx
+- lea    0xc(%rsp),%rcx ..
+  lea    0x8(%rsp),%rdx ..
   输入的数据会存在 $rsp+8 和 $rsp+12中
-- cmpl   $0x7,0x8(%rsp)
-  第一个参数要小于7，否则会跳转到炸弹
-  之后会跳转到一个switch中
-- 第一个参数为1时，跳转到
-  mov    $0x137,%eax
-  cmp    0xc(%rsp),%eax
-  je     400fc9 <phase_3+0x86>
+- cmpl   $0x7,0x8(%rsp) ..
+  第一个参数要小于7，否则会跳转到炸弹 ..
+  之后会跳转到一个switch中 .. 
+- 第一个参数为1时，跳转到 ..
+  mov    $0x137,%eax ..
+  cmp    0xc(%rsp),%eax ..
+  je     400fc9 <phase_3+0x86> ..
   第二个参数与 0x137 比较，相等则跳过炸弹
   其他分支同理
 
