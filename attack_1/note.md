@@ -3,6 +3,8 @@
 - [参考：小土刀/厚读CSAPP](https://www.wdxtub.com/blog/csapp/thick-csapp-lab-3)  
 了解 code-injection 和 ROF(return-oriented programming)
 
+
+## ctarget(code-injecton)
 ### touch_1
 - 输入应在一行，因为读取到换行符截止
 - 注意小端法机器
@@ -19,7 +21,19 @@
 - 一元 `imul`，第二个因子为`ax/eax/rax`
 - 使用绝对地址下断点：`b *0x40188d`  
 或使用相对地址：`b *hexmatch+0x41`（更稳，避免地址漂移）
-- 与`touch2`相比，有`push``call`等等，会该改变缓存区的值
+- 与`touch2`相比，有`push`、`call`等等，会该改变缓存区的值
 - 注入代码一开始用rdi保存cookie指针，再将touch3的地址压入栈中  
 填充缓冲区，将上一次ret值覆盖为指向注入代码起始地址，执行我们的注入代码  
-在调用`touch3`时，`touch3`使用`push`，`call`等，会覆写缓冲区，即将覆写`rdi`里的指针`0x5560f318`，寻找不会被覆写的地址储存cookie，再用rdi储存，即可解决问题
+在调用`touch3`时，`touch3`使用`push`，`call`等，会覆写缓冲区，即将覆写`rdi`里的指针`0x5560f318`，寻找不会被覆写的地址储存cookie，再用rdi储存改地址，即可解决问题
+
+
+## rtarget(ROF)
+- 与`ctarget` 相比，stack不可执行，`code-injection`不起作用
+- 使用`ROF`，即使用已有代码片段，通过栈溢出等手段，将返回地址连接成一串`gadgets`
+
+### touch1
+- 与`ctarget touch1`相似，将ans1输入进去，发现虽然启用`touch1`但是报错，使用`gdb`调试，发现问题出在`movaps %xmm0,-0x40(%rbp)`
+- `movaps`要求按16字节对齐，进入`touch1`后`p/x $rsp`可以发现末尾是`0x8`
+- 所以要使栈多弹出8个字节，或压入8个字节
+- 这里选择多弹出8个字节，则第一次`ret`可以选择先跳转到一个没有产生影响的函数(这里选择`end_farm`)，然后像先前操作一样利用栈缓冲更改第二次`ret`的地址（即`touch1`的地址）
+- 最后答案就是 40缓冲字节+8字节`end_farm`地址+8字节`touch1`地址
