@@ -37,3 +37,14 @@
 - 所以要使栈多弹出8个字节，或压入8个字节
 - 这里选择多弹出8个字节，则第一次`ret`可以选择先跳转到一个没有产生影响的函数(这里选择`end_farm`)，然后像先前操作一样利用栈缓冲更改第二次`ret`的地址（即`touch1`的地址）
 - 最后答案就是 40缓冲字节+8字节`end_farm`地址+8字节`touch1`地址
+
+### touch2
+- 要将`rdi`设为`cookie`，查看`farm.s`，没有直接的`mov`
+- 于是想到通过`pop`指定数值，查看`encoding of popq instruction`  
+![encoding of popq instruction](pop_instruction.png)  
+查找`[58-5f] c3`，发现有`pop %rax`，记录地址
+- 之后需要将`rax`移到`rdi`，查看`encoding of movq instruction`  
+![encoding of movq instruction](mov_instruction.png)  
+查找`48 59 c7 c3`，成功找到，记录地址，再跳转到`touch2`即可，注意16字节对齐
+- 最后答案：40缓冲字节+8字节`pop %rax`指令地址+8字节`cookie`数值(被`pop`部分)+8字节`mov %rax,%rdi`指令地址+`touch2`地址  
+恰好满足16字节，否则类似`touch1`多弹出8字节即可
