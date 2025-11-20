@@ -41,10 +41,36 @@
 ### touch2
 - 要将`rdi`设为`cookie`，查看`farm.s`，没有直接的`mov`
 - 于是想到通过`pop`指定数值，查看`encoding of popq instruction`  
-![encoding of popq instruction](pop_instruction.png)  
+![encoding of popq instruction](pop_instruction.png) 
 查找`[58-5f] c3`，发现有`pop %rax`，记录地址
 - 之后需要将`rax`移到`rdi`，查看`encoding of movq instruction`  
-![encoding of movq instruction](mov_instruction.png)  
+![encoding of movq instruction](mov_instruction.png)
 查找`48 59 c7 c3`，成功找到，记录地址，再跳转到`touch2`即可，注意16字节对齐
 - 最后答案：40缓冲字节+8字节`pop %rax`指令地址+8字节`cookie`数值(被`pop`部分)+8字节`mov %rax,%rdi`指令地址+`touch2`地址  
 恰好满足16字节，否则类似`touch1`多弹出8字节即可
+
+
+### touch3
+- `x/i $rip`打印当前指令
+- 将`cookie`的ACSII码放入缓存中，使`rdi`保存其地址传给`hexmatch`  
+我们可以先记下`getbuf`返回后的`rsp`，再记录偏移值，来得到cookie地址  
+`rsp`:`mov rsp,xxx`,查表搜寻可以发现可以存在`rax`中，且从`touch2`可知有`mov %rax,%rdi`，成功取到`rsp`  
+偏移值：类似`touch2`可以用`pop %rax`指定偏移值，然后需要`lea (%rdi,%rax,1),%rdi`，查找没有，但是有`lea (%rdi,%rsi,1),%rax`  
+需要将`rax`移到`rsi`,发现无法从64位下手，于是考虑32位，发现可以`eax - edx - ecx - esi`  
+由于`cookie`放在缓存区，偏移量为负的，但是`esi`为32位，`rdi`位64位，无法正确偏移  
+想办法扩展`esi`，失败；想办法使用64位寄存器传递，失败；查找其他办法扩展32位寄存器，失败，崩溃；  
+只能使偏移量为正，将`cookie`放在栈底，即`ret touch3`后，在退出`getbuf`和进入`touch3`时分别`p/x $rsp`即可知道偏移量
+- 答案：  
+40字节填充缓存区  
+`mov %rsp,%rax`  
+`mov %rax,%rdi`  
+`pop %rax`  
+偏移量  
+`mov %eax,%edx`  
+`mov %edx,%ecx`  
+`mov %ecx,%esi`  
+`lea (%rdi,%rsi,1),%rax`  
+`mov %rax,%rdi`  
+`touch3`地址  
+`cookie`ACSII码
+- 注意16字节对齐
